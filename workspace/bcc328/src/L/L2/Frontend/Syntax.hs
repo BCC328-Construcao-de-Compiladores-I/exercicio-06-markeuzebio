@@ -16,7 +16,7 @@ data L2
 -- an assignment.
 
 data S2
-  = Def Var E2 [S2]
+  = LDef Var E2 [S2]
   | LRead String Var
   | LPrint E2
   | LAssign Var E2

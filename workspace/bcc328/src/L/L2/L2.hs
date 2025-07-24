@@ -1,8 +1,11 @@
-
-import L.L2.Interpreter.Interp
+import L.L2.Interpreter.Interp (evalL2)
 import L.L2.Frontend.Syntax
+import L.L2.Frontend.Lexer
+import L.L2.Frontend.LALRParser (lalrParser)
 import Utils.Pretty
 
+import System.FilePath
+import System.Directory
 import System.Environment
 import System.FilePath
 import System.Process
@@ -31,20 +34,47 @@ runWithOptions opts = case opts of
 
 
 -- Implement the function to do lexical analysis for L2 programs and outputs the tokens
-
 lexerOnly :: FilePath -> IO ()
-lexerOnly file = error "Not implemented!"
+lexerOnly file = do
+  file_exists <- doesFileExist file
+  if file_exists
+    then do
+      source_code <- readFile file
+      putStrLn ((unlines . parseLexerOutput . lexer) source_code)
+    else error "File passed by argument does not exist!"
 
 
 -- Implement the function to do syntax analysis for L2 programs and outputs the syntax tree
 
 parserOnly :: FilePath -> IO ()
-parserOnly file = error "Not implemented!"
+parserOnly file = do
+  file_exists <- doesFileExist file
+  if file_exists
+    then do
+      source_code <- readFile file
+      result <- lalrParser source_code
+      case result of
+        Left  err_message -> putStrLn err_message
+        Right ast_tree    -> putStrLn (show ast_tree)
+    else error "File passed by argument does not exist!"
 
 -- Implement the whole interpreter pipeline: lexical and syntax analysis and then interpret the program
 
 interpret :: FilePath -> IO ()
-interpret file = error "Not implemented!"
+interpret file = do
+  file_exists <- doesFileExist file
+  if file_exists
+    then do
+      source_code <- readFile file
+      parseResult <- lalrParser source_code
+      case parseResult of
+        Left  err_message -> putStrLn err_message
+        Right ast_tree    -> do
+          interpretResult <- evalL2 ast_tree
+          case interpretResult of
+            Left  err_message -> putStrLn err_message
+            Right env         -> putStrLn (show env)
+    else error "File passed by argument does not exist!"
 
 -- Implement the whole compiler pipeline: lexical, syntax and semantic analysis and then generate v1 instructions from the program.
 
@@ -90,3 +120,25 @@ parseOptions args =
     ("--v1" : arg : _) -> [VM arg]
     ("--c" : arg : _) -> [C arg]
     _ -> [Help]
+
+-- It pretties the stream of Tokens output to be printed on console
+parseLexerOutput :: Either String [Token] -> [String]
+parseLexerOutput (Left err)                                     = [err]
+parseLexerOutput (Right [])                                     = []
+parseLexerOutput (Right ((Token (line, col) (TNumber n)) : xs)) = ["Numero " ++ show n ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TString s)) : xs)) = ["String \"" ++ s ++ "\" Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TLParen)) : xs))   = ["Parentesis (" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TRParen)) : xs))   = ["Parentesis )" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TPlus)) : xs))     = ["Mais +" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TMinus)) : xs))    = ["Menos -" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TTimes)) : xs))    = ["Vezes *" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TId s)) : xs))     = ["Identificador " ++ s ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TAssign)) : xs))   = ["Atribuicao :=" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TRead)) : xs))     = ["Palavra reservada read" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TPrint)) : xs))    = ["Palavra reservada print" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TDef)) : xs))      = ["Palavra reservada def" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TIn)) : xs))       = ["Palavra reservada in" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TEnd)) : xs))      = ["Palavra reservada end" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TComma)) : xs))    = ["Virgula ," ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TEOC)) : xs))      = ["Ponto e virgula ;" ++ " Linha:" ++ show line ++ " Coluna:" ++ show col] ++ parseLexerOutput (Right xs)
+parseLexerOutput (Right ((Token (line, col) (TEOF)) : xs))      = parseLexerOutput (Right xs)
