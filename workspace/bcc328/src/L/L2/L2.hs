@@ -2,6 +2,7 @@ import L.L2.Interpreter.Interp (evalL2)
 import L.L2.Frontend.Syntax
 import L.L2.Frontend.Lexer
 import L.L2.Frontend.LALRParser (lalrParser)
+import L.L2.Backend.V1Codegen
 import Utils.Pretty
 
 import System.FilePath
@@ -9,6 +10,7 @@ import System.Directory
 import System.Environment
 import System.FilePath
 import System.Process
+import System.IO
 
 main :: IO ()
 main = do
@@ -79,7 +81,20 @@ interpret file = do
 -- Implement the whole compiler pipeline: lexical, syntax and semantic analysis and then generate v1 instructions from the program.
 
 v1Compiler :: FilePath -> IO ()
-v1Compiler file = error "Not implemented!"
+v1Compiler file = do
+  file_exists <- doesFileExist file
+  if file_exists
+    then do
+      source_code <- readFile file
+      result <- lalrParser source_code
+      case result of
+        Left  err_message -> putStrLn err_message
+        Right ast_tree    -> do
+          interpretResult <- evalL2 ast_tree
+          case interpretResult of
+            Left  err_message -> putStrLn err_message
+            Right env         -> writeFile "ex1.v2" (show (ppr $ v2Codegen ast_tree))
+    else error "File passed by argument does not exist!"
 
 -- Implement the whole executable compiler, using C source and GCC.
 
