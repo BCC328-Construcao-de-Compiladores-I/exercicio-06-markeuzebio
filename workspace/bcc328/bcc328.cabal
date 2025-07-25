@@ -83,6 +83,7 @@ library
       L.L2.Frontend.LALRParser
       L.L2.Interpreter.Interp
       L.L2.Backend.V1Codegen
+      L.L2.Backend.CCodegen
       -- Utilities used in whole project
       Utils.Parser
       Utils.Pretty

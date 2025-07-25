@@ -3,6 +3,7 @@ import L.L2.Frontend.Syntax
 import L.L2.Frontend.Lexer
 import L.L2.Frontend.LALRParser (lalrParser)
 import L.L2.Backend.V1Codegen
+import L.L2.Backend.CCodegen (cL2Codegen)
 import Utils.Pretty
 
 import System.FilePath
@@ -99,7 +100,27 @@ v1Compiler file = do
 -- Implement the whole executable compiler, using C source and GCC.
 
 cCompiler :: FilePath -> IO ()
-cCompiler file = error "Not implemented!"
+cCompiler file = do
+  file_exists <- doesFileExist file
+  if file_exists
+    then do
+      source_code <- readFile file
+      result <- lalrParser source_code
+      case result of
+        Left  err_message -> putStrLn err_message
+        Right ast_tree    -> do
+          interpretResult <- evalL2 ast_tree
+          case interpretResult of
+            Left  err_message -> putStrLn err_message
+            Right env         -> do
+              let cFileName     = "ex1.c"
+              let execFileName  = "ex1"
+              let args          = ["-o", execFileName, cFileName]
+
+              writeFile cFileName (cL2Codegen ast_tree)
+              callProcess "gcc" args
+              callProcess ("./" ++ execFileName) []
+    else error "File passed by argument does not exist!"
 
 -- help message
 

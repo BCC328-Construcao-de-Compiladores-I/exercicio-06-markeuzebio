@@ -2,6 +2,8 @@ module L.L1.Backend.CCodegen where
 
 import L.L1.Frontend.Syntax
 import Utils.Pretty
+import Utils.Var
+import Utils.Value
 
 -- top level code generation function
 
@@ -23,12 +25,12 @@ generateBody (L1 ss)
   = map generateStmt ss
 
 generateStmt :: S1 -> String
-generateStmt (LAssign v e1)
-  = unwords ["int", pretty v, "=", generateExp e1, ";"]
-generateStmt (LPrint e1)
-  = unwords ["printf(%d,", generateExp e1, ");"]
-generateStmt (LRead s v)
-  = unwords ["print(\"",s,"\");\n", "scanf(%d, &", pretty v, ")"]
+generateStmt (LAssign id e)
+  = unwords ["int", pretty id, "=", generateExp e, ";"]
+generateStmt (LPrint e)
+  = unwords ["printf(%d,", generateExp e, ");"]
+generateStmt (LRead s id)
+  = unwords ["print(\"",s,"\");\n", "scanf(%d, &", pretty id, ");"]
 
 generateExp :: E1 -> String
 generateExp = pretty
